@@ -1,0 +1,52 @@
+body {
+  background: var(--bg-soft);
+  color: var(--text-dark);
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 20px 36px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+form {
+  margin-top: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.row {
+  gap: 8px;
+}
+
+.inline {
+  margin: 0;
+  color: var(--text-dark);
+}
+
+input[type='checkbox'] {
+  width: auto;
+}
+
+.ok {
+  color: #059669;
+  font-size: 13px;
+  min-height: 1.2em;
+}
+
+.limits {
+  margin-top: 16px;
+}
+
+button.primary {
+  width: 100%;
+  margin-top: 4px;
+}
