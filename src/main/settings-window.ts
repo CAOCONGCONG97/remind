@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 function pageUrl(name: string): string {
@@ -6,6 +7,20 @@ function pageUrl(name: string): string {
     return `${process.env.ELECTRON_RENDERER_URL}/${name}/index.html`
   }
   return join(__dirname, `../renderer/${name}/index.html`)
+}
+
+function windowIconPath(): string | undefined {
+  const candidates = [
+    join(process.resourcesPath, 'icon.ico'),
+    join(__dirname, '../../resources/icon.ico'),
+    join(__dirname, '../../../resources/icon.ico')
+  ]
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+  return undefined
 }
 
 export class SettingsWindowController {
@@ -20,14 +35,15 @@ export class SettingsWindowController {
       return
     }
     this.window = new BrowserWindow({
-      width: 520,
-      height: 680,
+      width: 480,
+      height: 760,
       resizable: true,
       minimizable: true,
       maximizable: false,
       title: '强制休息 — 设置',
       show: false,
-      backgroundColor: '#f7f8fa',
+      backgroundColor: '#f8fafc',
+      icon: windowIconPath(),
       webPreferences: {
         preload: this.preloadPath,
         contextIsolation: true,
@@ -68,15 +84,16 @@ export class SetupWindowController {
         return
       }
       this.window = new BrowserWindow({
-        width: 440,
-        height: 420,
+        width: 420,
+        height: 460,
         resizable: false,
         minimizable: false,
         maximizable: false,
         closable: false,
         title: '首次设置紧急密码',
         show: false,
-        backgroundColor: '#f7f8fa',
+        backgroundColor: '#eff6ff',
+        icon: windowIconPath(),
         webPreferences: {
           preload: this.preloadPath,
           contextIsolation: true,

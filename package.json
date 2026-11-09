@@ -33,9 +33,21 @@
     },
     "files": [
       "out/**/*",
-      "package.json"
+      "package.json",
+      "resources/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/tray.png",
+        "to": "tray.png"
+      },
+      {
+        "from": "resources/icon.ico",
+        "to": "icon.ico"
+      }
     ],
     "win": {
+      "icon": "resources/icon.ico",
       "target": [
         "nsis"
       ],
