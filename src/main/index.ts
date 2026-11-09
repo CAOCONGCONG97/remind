@@ -3,12 +3,14 @@ import { join } from 'node:path'
 import { hashPassword, verifyPassword } from '../core/password'
 import type { AppSettings, CancelShutdownScope } from '../core/types'
 import { EngineHost } from './engine-host'
+import { OnboardingWindowController } from './onboarding-window'
 import { OverlayManager } from './overlay-manager'
 import { setAutoStartEnabled } from './platform'
+import { PreRestToastController } from './pre-rest-toast'
 import { SettingsWindowController, SetupWindowController } from './settings-window'
 import { ShutdownScheduler } from './shutdown-scheduler'
 import { ShutdownToastController } from './shutdown-toast'
-import { aboutMessage, createAppTray } from './tray'
+import { aboutMessage, AppTrayController } from './tray'
 import { hasPasswordConfigured, loadSettings, saveSettings, updateSettings } from './settings-store'
 
 let engineHost: EngineHost | null = null
@@ -16,8 +18,10 @@ let shutdownScheduler: ShutdownScheduler | null = null
 let overlays: OverlayManager | null = null
 let settingsWindow: SettingsWindowController | null = null
 let setupWindow: SetupWindowController | null = null
+let onboardingWindow: OnboardingWindowController | null = null
 let shutdownToast: ShutdownToastController | null = null
-let tray: Electron.Tray | null = null
+let preRestToast: PreRestToastController | null = null
+let tray: AppTrayController | null = null
 let quitting = false
 
 const preloadPath = join(__dirname, '../preload/index.js')
@@ -50,6 +54,9 @@ function registerIpc(): void {
       }
       if (typeof patch.restMinutes === 'number') {
         next.restMinutes = patch.restMinutes
+      }
+      if (typeof patch.preRestWarnMinutes === 'number') {
+        next.preRestWarnMinutes = patch.preRestWarnMinutes
       }
       if (typeof patch.autoStart === 'boolean') {
         next.autoStart = patch.autoStart
@@ -96,8 +103,31 @@ function registerIpc(): void {
     const saved = updateSettings({ passwordHash: hashPassword(password) })
     setAutoStartEnabled(saved.autoStart)
     setupWindow?.markComplete()
-    startRuntime(saved)
+    // 首次设密后走三步引导；完成后由 onboarding:complete 启动计时
+    onboardingWindow = new OnboardingWindowController(preloadPath)
+    void onboardingWindow.openAndWait()
     return { ok: true }
+  })
+
+  ipcMain.handle('onboarding:complete', (_event, patch?: Partial<AppSettings>) => {
+    const current = loadSettings()
+    const next: AppSettings = { ...current }
+    if (patch?.triggerMode === 'fixed' || patch?.triggerMode === 'cumulative') {
+      next.triggerMode = patch.triggerMode
+    }
+    if (typeof patch?.workMinutes === 'number') {
+      next.workMinutes = patch.workMinutes
+    }
+    if (typeof patch?.restMinutes === 'number') {
+      next.restMinutes = patch.restMinutes
+    }
+    if (typeof patch?.dailyShutdownEnabled === 'boolean') {
+      next.dailyShutdownEnabled = patch.dailyShutdownEnabled
+    }
+    const saved = saveSettings(next)
+    onboardingWindow?.markComplete()
+    startRuntime(saved)
+    return toPublicSettings(saved)
   })
 
   ipcMain.handle('rest:continue', () => {
@@ -111,6 +141,27 @@ function registerIpc(): void {
     }
     engineHost?.emergencySkip()
     return { ok: true }
+  })
+
+  ipcMain.handle('rest:extend', (_event, payload: { minutes: number; password?: string }) => {
+    const minutes = Number(payload.minutes)
+    if (![15, 30].includes(minutes)) {
+      return { ok: false, message: '仅支持延长 15 或 30 分钟' }
+    }
+    // 休息前提醒窗延长需密码；托盘延长不走此接口
+    const settings = loadSettings()
+    if (!verifyPassword(payload.password ?? '', settings.passwordHash)) {
+      return { ok: false, message: '密码错误' }
+    }
+    const ok = engineHost?.extendWork(minutes) ?? false
+    if (ok) {
+      engineHost?.dismissPreRestToast()
+    }
+    return ok ? { ok: true } : { ok: false, message: '当前无法延长' }
+  })
+
+  ipcMain.handle('prerest:dismiss', () => {
+    engineHost?.dismissPreRestToast()
   })
 
   ipcMain.handle(
@@ -127,10 +178,44 @@ function registerIpc(): void {
     }
   )
 
+  ipcMain.handle('shutdown:defer', (_event, payload: { password: string; minutes: number }) => {
+    const settings = loadSettings()
+    if (!verifyPassword(payload.password ?? '', settings.passwordHash)) {
+      return { ok: false, message: '密码错误' }
+    }
+    const minutes = Number(payload.minutes)
+    if (![15, 30].includes(minutes)) {
+      return { ok: false, message: '仅支持推迟 15 或 30 分钟' }
+    }
+    const saved = shutdownScheduler?.defer(minutes) ?? settings
+    shutdownScheduler?.applySettings(saved)
+    return { ok: true }
+  })
+
   ipcMain.handle('shutdown:dismiss-toast', () => {
     shutdownToast?.hide()
-    // 仅收起提醒，不等于取消关机；遮罩层级恢复由下一 tick 决定
   })
+}
+
+function confirmExtend(minutes: number): void {
+  const result = dialog.showMessageBoxSync({
+    type: 'question',
+    buttons: ['取消', `延长 ${minutes} 分钟`],
+    defaultId: 1,
+    cancelId: 0,
+    title: '本段再延长',
+    message: `将当前工作段再延长 ${minutes} 分钟后再强制休息？`
+  })
+  if (result === 1) {
+    const ok = engineHost?.extendWork(minutes)
+    if (!ok) {
+      dialog.showMessageBox({
+        type: 'warning',
+        title: '无法延长',
+        message: '仅在工作计时阶段可以延长本段。'
+      })
+    }
+  }
 }
 
 function startRuntime(settings: AppSettings): void {
@@ -140,12 +225,21 @@ function startRuntime(settings: AppSettings): void {
   if (!shutdownToast) {
     shutdownToast = new ShutdownToastController(preloadPath)
   }
+  if (!preRestToast) {
+    preRestToast = new PreRestToastController(preloadPath)
+  }
   if (!settingsWindow) {
     settingsWindow = new SettingsWindowController(preloadPath)
   }
 
   engineHost?.stop()
-  engineHost = new EngineHost(settings, overlays)
+  engineHost = new EngineHost(settings, overlays, preRestToast, (snapshot) => {
+    const latest = loadSettings()
+    tray?.updateStatus({
+      snapshot,
+      triggerMode: latest.triggerMode
+    })
+  })
   engineHost.start()
 
   shutdownScheduler?.stop()
@@ -153,9 +247,10 @@ function startRuntime(settings: AppSettings): void {
   shutdownScheduler.start()
 
   if (!tray) {
-    tray = createAppTray({
+    tray = new AppTrayController({
       openSettings: () => settingsWindow?.open(),
       startRestNow: () => engineHost?.startRestNow(),
+      extendWork: (minutes) => confirmExtend(minutes),
       showAbout: () => {
         dialog.showMessageBox({
           type: 'info',
@@ -172,11 +267,15 @@ function startRuntime(settings: AppSettings): void {
     })
   }
 
+  tray.updateStatus({
+    snapshot: engineHost.getSnapshot(),
+    triggerMode: settings.triggerMode
+  })
+
   setAutoStartEnabled(settings.autoStart)
 }
 
 async function bootstrap(): Promise<void> {
-  // 单实例，避免多托盘抢遮罩
   const gotLock = app.requestSingleInstanceLock()
   if (!gotLock) {
     app.quit()
@@ -189,7 +288,6 @@ async function bootstrap(): Promise<void> {
   await app.whenReady()
   registerIpc()
 
-  // 隐藏 dock 类行为：Windows 无 dock；保持无主窗口
   if (process.platform === 'darwin') {
     app.dock?.hide()
   }
@@ -199,6 +297,7 @@ async function bootstrap(): Promise<void> {
 
   if (!hasPasswordConfigured(settings)) {
     await setupWindow.openAndWait()
+    // setup:password 内会开 onboarding 并 startRuntime
     return
   }
 
@@ -206,7 +305,7 @@ async function bootstrap(): Promise<void> {
 }
 
 app.on('window-all-closed', () => {
-  // 托盘常驻：关设置窗不退出（勿调用 app.quit）
+  // 托盘常驻
 })
 
 app.on('before-quit', () => {
@@ -215,6 +314,7 @@ app.on('before-quit', () => {
   shutdownScheduler?.stop()
   overlays?.destroy()
   shutdownToast?.destroy()
+  preRestToast?.destroy()
   tray?.destroy()
 })
 
@@ -230,5 +330,4 @@ void bootstrap().catch((error) => {
   app.quit()
 })
 
-// 抑制未使用告警（quitting 供后续扩展）
 void quitting

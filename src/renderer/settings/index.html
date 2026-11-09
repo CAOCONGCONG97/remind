@@ -9,20 +9,26 @@
   </head>
   <body>
     <main class="page">
-      <header>
+      <header class="hero">
+        <div class="badge">本地 · 离线</div>
         <h1>设置</h1>
-        <p class="hint">仅本地保存；修改立即作用于下一轮计时逻辑。</p>
+        <p class="hint">改动保存后作用于下一轮计时；进行中的休息不会被回溯缩短。</p>
       </header>
+
       <form id="form">
+        <p class="section-title">休息规则</p>
         <div class="field">
-          <label for="triggerMode">触发模式</label>
-          <select id="triggerMode">
-            <option value="fixed">固定间隔</option>
-            <option value="cumulative">累计会话时长</option>
-          </select>
+          <span class="label-text">触发模式</span>
+          <div class="segmented" role="radiogroup" aria-label="触发模式">
+            <input type="radio" name="triggerMode" id="modeFixed" value="fixed" checked />
+            <label for="modeFixed">固定间隔</label>
+            <input type="radio" name="triggerMode" id="modeCumulative" value="cumulative" />
+            <label for="modeCumulative">累计时长</label>
+          </div>
         </div>
+
         <div class="field">
-          <label for="workMinutes">工作间隔 / 累计阈值（分钟）</label>
+          <label for="workMinutes" id="workLabel">工作间隔（分钟）</label>
           <input id="workMinutes" type="number" min="1" max="1440" required />
         </div>
         <div class="field">
@@ -30,35 +36,71 @@
           <input id="restMinutes" type="number" min="1" max="180" required />
         </div>
         <div class="field">
-          <label for="password">紧急密码（留空表示不修改）</label>
-          <input id="password" type="password" autocomplete="new-password" />
+          <label for="preRestWarnMinutes">休息前提醒（分钟）</label>
+          <input id="preRestWarnMinutes" type="number" min="1" max="30" required />
+        </div>
+
+        <p class="section-title">紧急密码</p>
+        <div class="field">
+          <label for="password">新密码（留空不修改）</label>
+          <input id="password" type="password" autocomplete="new-password" placeholder="输入新密码" />
         </div>
         <div class="field">
-          <label for="passwordConfirm">确认紧急密码</label>
-          <input id="passwordConfirm" type="password" autocomplete="new-password" />
+          <label for="passwordConfirm">确认新密码</label>
+          <input id="passwordConfirm" type="password" autocomplete="new-password" placeholder="再输入一次" />
         </div>
-        <div class="field row">
-          <input id="autoStart" type="checkbox" />
-          <label for="autoStart" class="inline">开机自启</label>
+
+        <p class="section-title">系统</p>
+        <div class="switch-row">
+          <div class="copy">
+            <strong>开机自启</strong>
+            <span>登录 Windows 后自动启动</span>
+          </div>
+          <label class="switch">
+            <input id="autoStart" type="checkbox" />
+            <span class="track"></span>
+          </label>
         </div>
-        <div class="field row">
-          <input id="dailyShutdownEnabled" type="checkbox" />
-          <label for="dailyShutdownEnabled" class="inline">每日自动关机</label>
+
+        <div class="switch-row">
+          <div class="copy">
+            <strong>每日自动关机</strong>
+            <span>到点前提醒，可用紧急密码取消</span>
+          </div>
+          <label class="switch">
+            <input id="dailyShutdownEnabled" type="checkbox" />
+            <span class="track"></span>
+          </label>
         </div>
-        <div class="field">
-          <label for="shutdownTime">关机时刻</label>
-          <input id="shutdownTime" type="time" />
+
+        <div id="shutdownFields" class="shutdown-fields">
+          <div class="field">
+            <span class="label-text">关机时刻</span>
+            <div class="time-pair">
+              <div>
+                <div class="sublabel">时</div>
+                <input id="shutdownHour" type="number" min="0" max="23" required />
+              </div>
+              <div class="colon">:</div>
+              <div>
+                <div class="sublabel">分</div>
+                <input id="shutdownMinute" type="number" min="0" max="59" required />
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="shutdownWarnMinutes">关机前提醒（分钟）</label>
+            <input id="shutdownWarnMinutes" type="number" min="1" max="120" required />
+          </div>
         </div>
-        <div class="field">
-          <label for="shutdownWarnMinutes">关机前提醒（分钟）</label>
-          <input id="shutdownWarnMinutes" type="number" min="1" max="120" required />
-        </div>
+
         <p id="error" class="error"></p>
         <p id="ok" class="ok"></p>
-        <button type="submit" class="primary">保存</button>
+        <button type="submit" class="primary">保存设置</button>
       </form>
+
       <p class="hint limits">
-        Win11 限制：遮罩无法盖住 UAC/安全桌面；部分独占全屏游戏也可能压过遮罩。紧急密码仅本地校验。
+        Win11 限制：遮罩无法盖住 UAC / 安全桌面；部分独占全屏游戏也可能压过遮罩。紧急密码仅本地校验。
       </p>
     </main>
     <script type="module" src="./main.ts"></script>

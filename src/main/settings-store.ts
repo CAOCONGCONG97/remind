@@ -14,6 +14,12 @@ function sanitize(raw: Partial<AppSettings> | null | undefined): AppSettings {
   merged.triggerMode = merged.triggerMode === 'cumulative' ? 'cumulative' : 'fixed'
   merged.workMinutes = clampInt(merged.workMinutes, 1, 24 * 60, DEFAULT_SETTINGS.workMinutes)
   merged.restMinutes = clampInt(merged.restMinutes, 1, 180, DEFAULT_SETTINGS.restMinutes)
+  merged.preRestWarnMinutes = clampInt(
+    merged.preRestWarnMinutes,
+    1,
+    30,
+    DEFAULT_SETTINGS.preRestWarnMinutes
+  )
   merged.passwordHash = typeof merged.passwordHash === 'string' ? merged.passwordHash : ''
   merged.autoStart = Boolean(merged.autoStart)
   merged.dailyShutdownEnabled = Boolean(merged.dailyShutdownEnabled)
@@ -21,6 +27,12 @@ function sanitize(raw: Partial<AppSettings> | null | undefined): AppSettings {
   merged.shutdownWarnMinutes = clampInt(merged.shutdownWarnMinutes, 1, 120, DEFAULT_SETTINGS.shutdownWarnMinutes)
   merged.shutdownCancelledDate = typeof merged.shutdownCancelledDate === 'string' ? merged.shutdownCancelledDate : ''
   merged.shutdownSkipNext = Boolean(merged.shutdownSkipNext)
+  merged.shutdownDeferredUntil = clampInt(
+    merged.shutdownDeferredUntil,
+    0,
+    Number.MAX_SAFE_INTEGER,
+    0
+  )
   return merged
 }
 

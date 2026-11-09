@@ -1,14 +1,20 @@
+const titleEl = document.getElementById('title') as HTMLElement
 const summaryEl = document.getElementById('summary') as HTMLElement
 const remainEl = document.getElementById('remain') as HTMLElement
 const mainActions = document.getElementById('mainActions') as HTMLElement
 const cancelBtn = document.getElementById('cancelBtn') as HTMLButtonElement
+const deferBtn = document.getElementById('deferBtn') as HTMLButtonElement
 const ackBtn = document.getElementById('ackBtn') as HTMLButtonElement
-const cancelForm = document.getElementById('cancelForm') as HTMLFormElement
+const actionForm = document.getElementById('actionForm') as HTMLFormElement
 const passwordInput = document.getElementById('password') as HTMLInputElement
+const formHint = document.getElementById('formHint') as HTMLElement
+const cancelChoices = document.getElementById('cancelChoices') as HTMLElement
+const deferChoices = document.getElementById('deferChoices') as HTMLElement
 const errorEl = document.getElementById('error') as HTMLElement
 const backBtn = document.getElementById('backBtn') as HTMLButtonElement
 
-let pendingScope: 'once' | 'today' = 'once'
+type PendingAction = 'cancel-once' | 'cancel-today' | 'defer-15' | 'defer-30'
+let pendingAction: PendingAction = 'cancel-once'
 
 function formatMs(ms: number): string {
   const totalSec = Math.max(0, Math.ceil(ms / 1000))
@@ -17,43 +23,60 @@ function formatMs(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+function openForm(mode: 'cancel' | 'defer'): void {
+  mainActions.hidden = true
+  actionForm.hidden = false
+  errorEl.textContent = ''
+  passwordInput.value = ''
+  cancelChoices.hidden = mode !== 'cancel'
+  deferChoices.hidden = mode !== 'defer'
+  formHint.textContent = mode === 'cancel' ? '取消范围' : '推迟多久'
+  pendingAction = mode === 'cancel' ? 'cancel-once' : 'defer-15'
+  passwordInput.focus()
+}
+
 window.remind.onShutdownState((payload) => {
-  summaryEl.textContent = `计划关机时刻 ${payload.shutdownAtLabel}`
+  titleEl.textContent = payload.deferred ? '已推迟关机' : '即将关机'
+  summaryEl.textContent = `${payload.deferred ? '推迟至' : '计划关机时刻'} ${payload.shutdownAtLabel}`
   remainEl.textContent = `剩余 ${formatMs(payload.remainingMs)}`
 })
 
-cancelBtn.addEventListener('click', () => {
-  mainActions.hidden = true
-  cancelForm.hidden = false
-  errorEl.textContent = ''
-  passwordInput.value = ''
-  passwordInput.focus()
-})
+cancelBtn.addEventListener('click', () => openForm('cancel'))
+deferBtn.addEventListener('click', () => openForm('defer'))
 
 ackBtn.addEventListener('click', () => {
   void window.remind.dismissShutdownToast()
 })
 
 backBtn.addEventListener('click', () => {
-  cancelForm.hidden = true
+  actionForm.hidden = true
   mainActions.hidden = false
   errorEl.textContent = ''
 })
 
-cancelForm.addEventListener('click', (event) => {
+actionForm.addEventListener('click', (event) => {
   const target = event.target as HTMLElement
-  if (target instanceof HTMLButtonElement && target.dataset.scope) {
-    pendingScope = target.dataset.scope === 'today' ? 'today' : 'once'
+  if (target instanceof HTMLButtonElement && target.dataset.action) {
+    pendingAction = target.dataset.action as PendingAction
   }
 })
 
-cancelForm.addEventListener('submit', async (event) => {
+actionForm.addEventListener('submit', async (event) => {
   event.preventDefault()
-  const result = await window.remind.cancelShutdown(passwordInput.value, pendingScope)
+  const password = passwordInput.value
+  let result: { ok: boolean; message?: string }
+  if (pendingAction === 'cancel-once' || pendingAction === 'cancel-today') {
+    result = await window.remind.cancelShutdown(
+      password,
+      pendingAction === 'cancel-today' ? 'today' : 'once'
+    )
+  } else {
+    result = await window.remind.deferShutdown(password, pendingAction === 'defer-30' ? 30 : 15)
+  }
   if (!result.ok) {
-    errorEl.textContent = result.message ?? '取消失败'
+    errorEl.textContent = result.message ?? '操作失败'
     return
   }
-  cancelForm.hidden = true
+  actionForm.hidden = true
   mainActions.hidden = false
 })

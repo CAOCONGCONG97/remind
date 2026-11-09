@@ -8,21 +8,29 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main class="page">
-      <h1>设置紧急密码</h1>
-      <p class="hint">首次启动必须设置非空紧急密码，用于跳过休息或取消关机。未完成前不会开始计时。</p>
-      <form id="form">
-        <div class="field">
-          <label for="password">紧急密码</label>
-          <input id="password" type="password" autocomplete="new-password" required />
+    <main class="shell">
+      <section class="card">
+        <div class="mark" aria-hidden="true">
+          <span class="bar"></span>
+          <span class="bar"></span>
         </div>
-        <div class="field">
-          <label for="passwordConfirm">确认密码</label>
-          <input id="passwordConfirm" type="password" autocomplete="new-password" required />
-        </div>
-        <p id="error" class="error"></p>
-        <button type="submit" class="primary">开始使用</button>
-      </form>
+        <h1>设置紧急密码</h1>
+        <p class="hint">
+          用于跳过休息或取消关机。首次必须设置，完成后才会开始计时。
+        </p>
+        <form id="form">
+          <div class="field">
+            <label for="password">紧急密码</label>
+            <input id="password" type="password" autocomplete="new-password" required autofocus placeholder="请输入密码" />
+          </div>
+          <div class="field">
+            <label for="passwordConfirm">确认密码</label>
+            <input id="passwordConfirm" type="password" autocomplete="new-password" required placeholder="再输入一次" />
+          </div>
+          <p id="error" class="error"></p>
+          <button type="submit" class="primary">开始使用</button>
+        </form>
+      </section>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

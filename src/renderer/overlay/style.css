@@ -1,5 +1,7 @@
 body {
-  background: radial-gradient(circle at top, #1e293b, #020617 60%);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.22), transparent 42%),
+    radial-gradient(circle at top, #1e293b, #020617 62%);
   color: var(--text);
   overflow: hidden;
   user-select: none;
@@ -17,24 +19,35 @@ body {
 }
 
 .eyebrow {
-  letter-spacing: 0.2em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #7dd3fc;
+  color: #93c5fd;
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .countdown {
-  font-size: clamp(64px, 12vw, 120px);
-  font-weight: 700;
+  font-size: clamp(68px, 12vw, 124px);
+  font-weight: 720;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
+  text-shadow: 0 10px 40px rgba(37, 99, 235, 0.25);
 }
 
 .status {
   margin: 0;
   color: #cbd5e1;
   font-size: 18px;
+}
+
+.tip {
+  margin: 0;
+  max-width: 28rem;
+  color: #93c5fd;
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 1.5em;
 }
 
 .actions {
@@ -44,14 +57,21 @@ body {
   justify-content: center;
 }
 
+.actions .primary {
+  min-width: 160px;
+  height: 48px;
+  font-size: 16px;
+}
+
 .emergency {
   width: min(360px, 92vw);
   margin-top: 8px;
   padding: 16px;
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.28);
   text-align: left;
+  backdrop-filter: blur(8px);
 }
 
 .emergency label {

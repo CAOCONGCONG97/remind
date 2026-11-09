@@ -30,7 +30,9 @@ export default defineConfig({
           overlay: resolve(__dirname, 'src/renderer/overlay/index.html'),
           settings: resolve(__dirname, 'src/renderer/settings/index.html'),
           setup: resolve(__dirname, 'src/renderer/setup/index.html'),
-          shutdown: resolve(__dirname, 'src/renderer/shutdown/index.html')
+          shutdown: resolve(__dirname, 'src/renderer/shutdown/index.html'),
+          prerest: resolve(__dirname, 'src/renderer/prerest/index.html'),
+          onboarding: resolve(__dirname, 'src/renderer/onboarding/index.html')
         }
       }
     }

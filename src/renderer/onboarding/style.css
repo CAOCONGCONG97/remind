@@ -1,0 +1,43 @@
+body {
+  background:
+    radial-gradient(900px 420px at 20% -10%, #dbeafe 0%, transparent 55%),
+    linear-gradient(180deg, #f8fafc, #eef2ff);
+  color: var(--text-dark);
+  min-height: 100vh;
+}
+
+.page {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 28px 22px;
+}
+
+.step-indicator {
+  margin: 0 0 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.hint {
+  margin-bottom: 16px;
+}
+
+.nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.nav .primary,
+.nav .ghost {
+  flex: 1;
+  height: 44px;
+}
