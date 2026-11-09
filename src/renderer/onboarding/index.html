@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>快速开始</title>
+    <link rel="stylesheet" href="../shared/ui.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <p class="step-indicator" id="stepIndicator">第 1 / 3 步</p>
+      <section id="step1" class="step">
+        <h1>选择触发方式</h1>
+        <p class="hint">固定间隔更简单；累计时长会在锁屏/睡眠时暂停计时。</p>
+        <div class="segmented" role="radiogroup">
+          <input type="radio" name="triggerMode" id="modeFixed" value="fixed" checked />
+          <label for="modeFixed">固定间隔</label>
+          <input type="radio" name="triggerMode" id="modeCumulative" value="cumulative" />
+          <label for="modeCumulative">累计时长</label>
+        </div>
+      </section>
+
+      <section id="step2" class="step" hidden>
+        <h1>设置时长</h1>
+        <p class="hint">推荐从 60 分钟工作 / 5 分钟休息开始，之后可在设置里改。</p>
+        <div class="field">
+          <label for="workMinutes" id="workLabel">工作间隔（分钟）</label>
+          <input id="workMinutes" type="number" min="1" max="1440" value="60" />
+        </div>
+        <div class="field">
+          <label for="restMinutes">休息时长（分钟）</label>
+          <input id="restMinutes" type="number" min="1" max="180" value="5" />
+        </div>
+      </section>
+
+      <section id="step3" class="step" hidden>
+        <h1>要不要每日关机？</h1>
+        <p class="hint">可随时在设置里开关。开启后会在关机前提醒，并可用密码取消或推迟。</p>
+        <div class="switch-row">
+          <div class="copy">
+            <strong>每日自动关机</strong>
+            <span>默认关闭，推荐先观察休息节奏</span>
+          </div>
+          <label class="switch">
+            <input id="dailyShutdownEnabled" type="checkbox" />
+            <span class="track"></span>
+          </label>
+        </div>
+      </section>
+
+      <p id="error" class="error"></p>
+      <div class="nav">
+        <button type="button" id="backBtn" class="ghost" hidden>上一步</button>
+        <button type="button" id="nextBtn" class="primary">下一步</button>
+      </div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

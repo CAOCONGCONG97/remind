@@ -1,12 +1,19 @@
 import { Menu, Tray, app, nativeImage } from 'electron'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { formatDurationZh, type EngineSnapshot, type TriggerMode } from '../core/types'
 
 export type TrayActions = {
   openSettings: () => void
   startRestNow: () => void
+  extendWork: (minutes: number) => void
   showAbout: () => void
   quit: () => void
+}
+
+export type TrayStatus = {
+  snapshot: EngineSnapshot
+  triggerMode: TriggerMode
 }
 
 /** 开发时指向仓库 resources；打包后指向 resources 旁路目录 */
@@ -30,45 +37,94 @@ function createTrayIcon(): Electron.NativeImage {
   if (existsSync(iconPath)) {
     const fromFile = nativeImage.createFromPath(iconPath)
     if (!fromFile.isEmpty()) {
-      // Win 托盘常见 16×16；提供一份缩放更清晰
       return fromFile.resize({ width: 16, height: 16 })
     }
-  }
-  // 兜底：内嵌蓝底暂停图标（避免空图标）
-  const pngBase64 =
-    'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABaElEQVRYR+2XMQ6CQBBF/4wWVhgjFpaewMJYeAEPYGHiBTyBhRZewMJYeAEPwMFYeAELC42FxuB/gwZZliULwYRJNrvzZ+bNzO7sAkf8xxHz4QQwA5gBzABmADOAGWAuAKjX61yv1/9lIJVK0Wq1KJfLPD8/E4/HGQwGDAYD0uk0mUyGSCQCwGaz0Ww2yWazRKNRms0m8XicWq1GLpdjNBqxWq1IJpOcTic2mw3lcpnBYMDxeOTj44N4PM5kMmG5XFIqlWg0Guj1esjn83S7XQaDAYlEglwuRyqV4vX1lUKhgFarxXq9ZrvdUiqVKBaL6HQ6DAYD5vM5x+ORSqVCp9NhvV5jGAao1+s0Gg0Mw2C321Eul9HpdDgajQgGg9i2TSAQwLIsAFiv1/R6PVKpFMfjkUAgQDgcBmC5XLJYLHj/9YLfXwL8dQH+dQF+A2AGMAOYv4D/8AJmADOAGWAuAH4A6QhWQW6q/1gAAAAASUVORK5CYII='
-  const image = nativeImage.createFromDataURL(`data:image/png;base64,${pngBase64}`)
-  if (!image.isEmpty()) {
-    return image.resize({ width: 16, height: 16 })
   }
   return nativeImage.createEmpty()
 }
 
-export function createAppTray(actions: TrayActions): Tray {
-  const tray = new Tray(createTrayIcon())
-  tray.setToolTip('强制休息提醒')
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: '设置…',
-      click: () => actions.openSettings()
-    },
-    {
-      label: '立即休息',
-      click: () => actions.startRestNow()
-    },
-    { type: 'separator' },
-    {
-      label: '关于',
-      click: () => actions.showAbout()
-    },
-    {
-      label: '退出',
-      click: () => actions.quit()
-    }
-  ])
-  tray.setContextMenu(contextMenu)
-  tray.on('double-click', () => actions.openSettings())
-  return tray
+function statusLabel(status: TrayStatus): string {
+  const { snapshot, triggerMode } = status
+  const modeText = triggerMode === 'cumulative' ? '累计时长' : '固定间隔'
+  if (snapshot.phase === 'resting') {
+    return `休息中 · 剩余 ${formatDurationZh(snapshot.restRemainingMs)}`
+  }
+  if (snapshot.phase === 'awaitContinue') {
+    return '休息结束 · 等待继续工作'
+  }
+  if (snapshot.sessionPaused) {
+    return `${modeText} · 已暂停（锁屏/睡眠）`
+  }
+  return `${modeText} · 距休息 ${formatDurationZh(snapshot.workRemainingMs)}`
+}
+
+export class AppTrayController {
+  private readonly tray: Tray
+  private lastStatus: TrayStatus | null = null
+
+  constructor(private readonly actions: TrayActions) {
+    this.tray = new Tray(createTrayIcon())
+    this.tray.setToolTip('强制休息提醒')
+    this.rebuildMenu()
+    this.tray.on('double-click', () => this.actions.openSettings())
+  }
+
+  updateStatus(status: TrayStatus): void {
+    this.lastStatus = status
+    this.tray.setToolTip(`强制休息提醒\n${statusLabel(status)}`)
+    // 菜单里的状态行需要重建才刷新
+    this.rebuildMenu()
+  }
+
+  destroy(): void {
+    this.tray.destroy()
+  }
+
+  private rebuildMenu(): void {
+    const statusText = this.lastStatus ? statusLabel(this.lastStatus) : '状态加载中…'
+    const canExtend = this.lastStatus?.snapshot.phase === 'working'
+
+    this.tray.setContextMenu(
+      Menu.buildFromTemplate([
+        {
+          label: statusText,
+          enabled: false
+        },
+        { type: 'separator' },
+        {
+          label: '设置…',
+          click: () => this.actions.openSettings()
+        },
+        {
+          label: '立即休息',
+          click: () => this.actions.startRestNow()
+        },
+        {
+          label: '本段再延长',
+          enabled: canExtend,
+          submenu: [
+            {
+              label: '延长 15 分钟',
+              click: () => this.actions.extendWork(15)
+            },
+            {
+              label: '延长 30 分钟',
+              click: () => this.actions.extendWork(30)
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: '关于',
+          click: () => this.actions.showAbout()
+        },
+        {
+          label: '退出',
+          click: () => this.actions.quit()
+        }
+      ])
+    )
+  }
 }
 
 export function aboutMessage(): string {

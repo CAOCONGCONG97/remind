@@ -4,6 +4,7 @@ const modeCumulative = document.getElementById('modeCumulative') as HTMLInputEle
 const workMinutes = document.getElementById('workMinutes') as HTMLInputElement
 const workLabel = document.getElementById('workLabel') as HTMLElement
 const restMinutes = document.getElementById('restMinutes') as HTMLInputElement
+const preRestWarnMinutes = document.getElementById('preRestWarnMinutes') as HTMLInputElement
 const password = document.getElementById('password') as HTMLInputElement
 const passwordConfirm = document.getElementById('passwordConfirm') as HTMLInputElement
 const autoStart = document.getElementById('autoStart') as HTMLInputElement
@@ -48,6 +49,7 @@ async function load(): Promise<void> {
   modeCumulative.checked = settings.triggerMode === 'cumulative'
   workMinutes.value = String(settings.workMinutes)
   restMinutes.value = String(settings.restMinutes)
+  preRestWarnMinutes.value = String(settings.preRestWarnMinutes)
   autoStart.checked = settings.autoStart
   dailyShutdownEnabled.checked = settings.dailyShutdownEnabled
   const parts = parseTimeParts(settings.shutdownTime)
@@ -71,6 +73,7 @@ form.addEventListener('submit', async (event) => {
       triggerMode: selectedTriggerMode(),
       workMinutes: Number(workMinutes.value),
       restMinutes: Number(restMinutes.value),
+      preRestWarnMinutes: Number(preRestWarnMinutes.value),
       autoStart: autoStart.checked,
       dailyShutdownEnabled: dailyShutdownEnabled.checked,
       shutdownTime: formatShutdownTime(),

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 export type ShutdownToastPayload = {
   shutdownAtLabel: string
   remainingMs: number
+  deferred?: boolean
 }
 
 function pageUrl(name: string): string {
@@ -55,7 +56,7 @@ export class ShutdownToastController {
       return this.window
     }
     const width = 360
-    const height = 220
+    const height = 280
     this.window = new BrowserWindow({
       width,
       height,

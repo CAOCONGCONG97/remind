@@ -6,7 +6,7 @@ import type { OverlayManager } from './overlay-manager'
 
 /**
  * 每日关机调度：到「提前提醒」时点弹出右下角窗；到点执行关机。
- * 取消范围：仅本次 / 当天。
+ * 取消范围：仅本次 / 当天；也可推迟 N 分钟。
  */
 export class ShutdownScheduler {
   private timer: NodeJS.Timeout | null = null
@@ -46,13 +46,28 @@ export class ShutdownScheduler {
     if (scope === 'today') {
       this.settings = updateSettings({
         shutdownCancelledDate: localDateKey(),
-        shutdownSkipNext: false
+        shutdownSkipNext: false,
+        shutdownDeferredUntil: 0
       })
     } else {
       this.settings = updateSettings({
-        shutdownSkipNext: true
+        shutdownSkipNext: true,
+        shutdownDeferredUntil: 0
       })
     }
+    this.toast.hide()
+    this.overlays.setBelowShutdownToast(false)
+    this.warningShownForKey = ''
+    return this.settings
+  }
+
+  /** 密码校验后由主进程调用：推迟 N 分钟再关机 */
+  defer(minutes: number, nowMs = Date.now()): AppSettings {
+    const until = nowMs + Math.max(1, minutes) * 60_000
+    this.settings = updateSettings({
+      shutdownDeferredUntil: until,
+      shutdownSkipNext: false
+    })
     this.toast.hide()
     this.overlays.setBelowShutdownToast(false)
     this.warningShownForKey = ''
@@ -67,10 +82,40 @@ export class ShutdownScheduler {
     }
 
     const now = new Date()
+    const nowMs = now.getTime()
     const today = localDateKey(now)
     if (this.settings.shutdownCancelledDate === today) {
       this.toast.hide()
       this.overlays.setBelowShutdownToast(false)
+      return
+    }
+
+    if (this.settings.shutdownDeferredUntil > nowMs) {
+      const remainingMs = this.settings.shutdownDeferredUntil - nowMs
+      const label = formatTime(new Date(this.settings.shutdownDeferredUntil))
+      const payload = { shutdownAtLabel: label, remainingMs, deferred: true }
+      this.overlays.setBelowShutdownToast(true)
+      if (this.warningShownForKey !== `defer:${this.settings.shutdownDeferredUntil}`) {
+        this.warningShownForKey = `defer:${this.settings.shutdownDeferredUntil}`
+        this.toast.show(payload)
+      } else {
+        this.toast.update(payload)
+      }
+      return
+    }
+
+    if (this.settings.shutdownDeferredUntil > 0 && this.settings.shutdownDeferredUntil <= nowMs) {
+      // 推迟到期：执行关机（除非又被取消）
+      if (this.settings.shutdownSkipNext) {
+        this.settings = updateSettings({ shutdownSkipNext: false, shutdownDeferredUntil: 0 })
+        this.toast.hide()
+        this.overlays.setBelowShutdownToast(false)
+        return
+      }
+      this.settings = updateSettings({ shutdownDeferredUntil: 0 })
+      this.toast.hide()
+      this.overlays.setBelowShutdownToast(false)
+      await shutdownNow('强制休息提醒：推迟后的关机时刻已到')
       return
     }
 
@@ -79,7 +124,7 @@ export class ShutdownScheduler {
       return
     }
 
-    const remainingMs = target.getTime() - now.getTime()
+    const remainingMs = target.getTime() - nowMs
     const warnMs = this.settings.shutdownWarnMinutes * 60_000
     const dayKey = `${today}@${this.settings.shutdownTime}`
 
@@ -98,7 +143,7 @@ export class ShutdownScheduler {
 
     if (remainingMs <= warnMs) {
       const label = formatTime(target)
-      const payload = { shutdownAtLabel: label, remainingMs }
+      const payload = { shutdownAtLabel: label, remainingMs, deferred: false }
       if (this.warningShownForKey !== dayKey) {
         this.warningShownForKey = dayKey
         this.overlays.setBelowShutdownToast(true)
@@ -124,7 +169,6 @@ function nextShutdownDate(now: Date, hhmm: string): Date | null {
   const target = new Date(now)
   target.setSeconds(0, 0)
   target.setHours(hour, minute, 0, 0)
-  // 已过今日关机点：本调度只关心「今日这一次」；过点后等次日（由日期键重置）
   return target
 }
 

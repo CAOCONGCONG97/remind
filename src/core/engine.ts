@@ -4,6 +4,7 @@ import type { EngineConfig, EngineListener, EnginePhase, EngineSnapshot } from '
  * 与平台无关的休息引擎：
  * - fixed：按墙钟间隔；锁屏/睡眠跨过后若已逾期，唤醒立即休息
  * - cumulative：仅活跃会话累计；锁屏/睡眠暂停
+ * - 支持本段延长（workBonusMs）；休息前进入 preRestWarning 窗口
  * 倒计时归零后进入 awaitContinue，须 continueWork / emergencySkip 才 dismiss。
  */
 export class RestEngine {
@@ -14,6 +15,8 @@ export class RestEngine {
   private workSegmentStartedAt = 0
   /** 累计模式：本段已确认累计的毫秒（暂停前结算） */
   private cumulativeBankedMs = 0
+  /** 本段临时延长的毫秒（专注会话） */
+  private workBonusMs = 0
   private restEndsAt = 0
   private lastNowMs = 0
   private readonly listeners = new Set<EngineListener>()
@@ -33,10 +36,19 @@ export class RestEngine {
   }
 
   snapshot(nowMs = this.lastNowMs): EngineSnapshot {
+    const workElapsedMs = this.computeWorkElapsedMs(nowMs)
+    const workRemainingMs = this.computeWorkRemainingMs(nowMs, workElapsedMs)
+    const warnMs = this.config.preRestWarnMinutes * 60_000
+    const preRestWarning =
+      this.phase === 'working' && !this.sessionPaused && workRemainingMs > 0 && workRemainingMs <= warnMs
+
     return {
       phase: this.phase,
-      workElapsedMs: this.computeWorkElapsedMs(nowMs),
+      workElapsedMs,
+      workRemainingMs,
       restRemainingMs: this.computeRestRemainingMs(nowMs),
+      preRestWarning,
+      workBonusMs: this.workBonusMs,
       sessionPaused: this.sessionPaused,
       config: { ...this.config }
     }
@@ -45,7 +57,6 @@ export class RestEngine {
   updateConfig(config: EngineConfig, nowMs = Date.now()): void {
     this.lastNowMs = nowMs
     this.config = normalizeConfig(config)
-    // 进行中的休息不回溯缩短；工作段阈值立即按新配置判定
     if (this.phase === 'working' && !this.sessionPaused) {
       this.maybeTriggerRest(nowMs)
     }
@@ -103,13 +114,11 @@ export class RestEngine {
     const wasPaused = this.sessionPaused
     this.sessionPaused = false
     if (this.config.triggerMode === 'fixed') {
-      // 固定间隔用墙钟：暂停期间起点不变，唤醒后检查是否逾期
-      if (wasPaused && this.computeWorkElapsedMs(nowMs) >= this.workLimitMs()) {
+      if (wasPaused && this.computeWorkElapsedMs(nowMs) >= this.effectiveWorkLimitMs()) {
         this.enterRest(nowMs)
         return
       }
     } else {
-      // 累计：暂停期间不计时，恢复后从新起点继续加 banked
       this.workSegmentStartedAt = nowMs
     }
     this.maybeTriggerRest(nowMs)
@@ -126,14 +135,27 @@ export class RestEngine {
     this.enterRest(nowMs)
   }
 
+  /**
+   * 专注会话：仅 working 时可延长本段阈值（分钟）。
+   * 返回是否生效。
+   */
+  extendWork(minutes: number, nowMs = Date.now()): boolean {
+    this.lastNowMs = nowMs
+    if (this.phase !== 'working' || minutes <= 0) {
+      this.emit(nowMs)
+      return false
+    }
+    this.workBonusMs += Math.floor(minutes) * 60_000
+    this.emit(nowMs)
+    return true
+  }
+
   continueWork(nowMs = Date.now()): void {
     this.lastNowMs = nowMs
     if (this.phase !== 'awaitContinue' && this.phase !== 'resting') {
       this.emit(nowMs)
       return
     }
-    // 规格：继续工作是倒计时结束后的正常路径；倒计时期间应走紧急退出。
-    // 仍允许在 resting 点继续（UI 仅在结束后展示按钮），防御性复位。
     this.resetWorkSegment(nowMs)
     this.emit(nowMs)
   }
@@ -152,6 +174,7 @@ export class RestEngine {
     this.phase = 'working'
     this.sessionPaused = false
     this.cumulativeBankedMs = 0
+    this.workBonusMs = 0
     this.workSegmentStartedAt = nowMs
     this.restEndsAt = 0
   }
@@ -167,7 +190,7 @@ export class RestEngine {
     if (this.phase !== 'working' || this.sessionPaused) {
       return
     }
-    if (this.computeWorkElapsedMs(nowMs) >= this.workLimitMs()) {
+    if (this.computeWorkElapsedMs(nowMs) >= this.effectiveWorkLimitMs()) {
       this.enterRest(nowMs)
     }
   }
@@ -180,22 +203,25 @@ export class RestEngine {
       const active = this.sessionPaused ? 0 : Math.max(0, nowMs - this.workSegmentStartedAt)
       return this.cumulativeBankedMs + active
     }
-    // fixed：墙钟自本段起点起算（含锁屏期间）
     return Math.max(0, nowMs - this.workSegmentStartedAt)
+  }
+
+  private computeWorkRemainingMs(nowMs: number, workElapsedMs = this.computeWorkElapsedMs(nowMs)): number {
+    if (this.phase !== 'working') {
+      return 0
+    }
+    return Math.max(0, this.effectiveWorkLimitMs() - workElapsedMs)
   }
 
   private computeRestRemainingMs(nowMs: number): number {
     if (this.phase === 'resting') {
       return Math.max(0, this.restEndsAt - nowMs)
     }
-    if (this.phase === 'awaitContinue') {
-      return 0
-    }
     return 0
   }
 
-  private workLimitMs(): number {
-    return this.config.workMinutes * 60_000
+  private effectiveWorkLimitMs(): number {
+    return this.config.workMinutes * 60_000 + this.workBonusMs
   }
 
   private restLimitMs(): number {
@@ -214,6 +240,7 @@ function normalizeConfig(config: EngineConfig): EngineConfig {
   return {
     triggerMode: config.triggerMode === 'cumulative' ? 'cumulative' : 'fixed',
     workMinutes: Math.max(1, Math.floor(config.workMinutes)),
-    restMinutes: Math.max(1, Math.floor(config.restMinutes))
+    restMinutes: Math.max(1, Math.floor(config.restMinutes)),
+    preRestWarnMinutes: Math.max(1, Math.floor(config.preRestWarnMinutes ?? 2))
   }
 }

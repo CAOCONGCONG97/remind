@@ -9,20 +9,25 @@
   </head>
   <body>
     <main class="toast">
-      <h1>即将关机</h1>
+      <h1 id="title">即将关机</h1>
       <p id="summary" class="summary">计划关机时刻 --:--</p>
       <p id="remain" class="remain">剩余 --:--</p>
       <div id="mainActions" class="actions">
         <button id="cancelBtn" class="danger">取消关机</button>
+        <button id="deferBtn" class="primary">推迟…</button>
         <button id="ackBtn" class="ghost">知道了</button>
       </div>
-      <form id="cancelForm" hidden>
+      <form id="actionForm" hidden>
         <label for="password">紧急密码</label>
         <input id="password" type="password" autocomplete="current-password" />
-        <p class="hint">请选择取消范围</p>
-        <div class="actions">
-          <button type="submit" data-scope="once" class="primary">仅本次</button>
-          <button type="submit" data-scope="today" class="primary">当天</button>
+        <p id="formHint" class="hint">请选择操作</p>
+        <div id="cancelChoices" class="actions">
+          <button type="submit" data-action="cancel-once" class="primary">仅本次</button>
+          <button type="submit" data-action="cancel-today" class="primary">当天</button>
+        </div>
+        <div id="deferChoices" class="actions" hidden>
+          <button type="submit" data-action="defer-15" class="primary">推迟 15 分钟</button>
+          <button type="submit" data-action="defer-30" class="primary">推迟 30 分钟</button>
         </div>
         <button type="button" id="backBtn" class="ghost wide">返回</button>
         <p id="error" class="error"></p>
