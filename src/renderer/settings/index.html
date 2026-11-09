@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>设置</title>
+    <link rel="stylesheet" href="../shared/ui.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <h1>设置</h1>
+        <p class="hint">仅本地保存；修改立即作用于下一轮计时逻辑。</p>
+      </header>
+      <form id="form">
+        <div class="field">
+          <label for="triggerMode">触发模式</label>
+          <select id="triggerMode">
+            <option value="fixed">固定间隔</option>
+            <option value="cumulative">累计会话时长</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="workMinutes">工作间隔 / 累计阈值（分钟）</label>
+          <input id="workMinutes" type="number" min="1" max="1440" required />
+        </div>
+        <div class="field">
+          <label for="restMinutes">休息时长（分钟）</label>
+          <input id="restMinutes" type="number" min="1" max="180" required />
+        </div>
+        <div class="field">
+          <label for="password">紧急密码（留空表示不修改）</label>
+          <input id="password" type="password" autocomplete="new-password" />
+        </div>
+        <div class="field">
+          <label for="passwordConfirm">确认紧急密码</label>
+          <input id="passwordConfirm" type="password" autocomplete="new-password" />
+        </div>
+        <div class="field row">
+          <input id="autoStart" type="checkbox" />
+          <label for="autoStart" class="inline">开机自启</label>
+        </div>
+        <div class="field row">
+          <input id="dailyShutdownEnabled" type="checkbox" />
+          <label for="dailyShutdownEnabled" class="inline">每日自动关机</label>
+        </div>
+        <div class="field">
+          <label for="shutdownTime">关机时刻</label>
+          <input id="shutdownTime" type="time" />
+        </div>
+        <div class="field">
+          <label for="shutdownWarnMinutes">关机前提醒（分钟）</label>
+          <input id="shutdownWarnMinutes" type="number" min="1" max="120" required />
+        </div>
+        <p id="error" class="error"></p>
+        <p id="ok" class="ok"></p>
+        <button type="submit" class="primary">保存</button>
+      </form>
+      <p class="hint limits">
+        Win11 限制：遮罩无法盖住 UAC/安全桌面；部分独占全屏游戏也可能压过遮罩。紧急密码仅本地校验。
+      </p>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

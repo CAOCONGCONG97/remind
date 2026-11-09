@@ -1,0 +1,59 @@
+body {
+  background: #111827;
+  color: #f8fafc;
+  overflow: hidden;
+}
+
+.toast {
+  padding: 16px 16px 14px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.summary,
+.remain {
+  margin: 0 0 8px;
+  color: #cbd5e1;
+}
+
+.remain {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fde68a;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+form {
+  margin-top: 8px;
+}
+
+form label {
+  color: #e2e8f0;
+}
+
+form input {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+  margin-bottom: 8px;
+}
+
+.wide {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.hint {
+  color: #94a3b8;
+  margin: 0 0 4px;
+}

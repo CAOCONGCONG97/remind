@@ -1,0 +1,29 @@
+body {
+  background: linear-gradient(160deg, #e0f2fe, #f8fafc 55%);
+  color: var(--text-dark);
+  min-height: 100vh;
+}
+
+.page {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 36px 22px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+form {
+  margin-top: 18px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+button.primary {
+  width: 100%;
+}

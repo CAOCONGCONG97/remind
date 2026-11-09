@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>强制休息</title>
+    <link rel="stylesheet" href="../shared/ui.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="overlay">
+      <p class="eyebrow">强制休息中</p>
+      <div id="countdown" class="countdown">--:--</div>
+      <p id="status" class="status">请离开屏幕，放松一下</p>
+      <div class="actions">
+        <button id="continueBtn" class="primary" hidden>继续工作</button>
+        <button id="emergencyBtn" class="ghost">紧急退出…</button>
+      </div>
+      <form id="emergencyForm" class="emergency" hidden>
+        <label for="password">紧急密码</label>
+        <input id="password" type="password" autocomplete="current-password" />
+        <div class="row">
+          <button type="submit" class="danger">确认跳过</button>
+          <button type="button" id="cancelEmergency" class="ghost">取消</button>
+        </div>
+        <p id="emergencyError" class="error"></p>
+      </form>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
