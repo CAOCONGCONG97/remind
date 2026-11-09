@@ -48,17 +48,35 @@
     ],
     "win": {
       "icon": "resources/icon.ico",
+      "signAndEditExecutable": false,
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
-      "artifactName": "${productName}-${version}-setup.${ext}"
+      "artifactName": "remind-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "强制休息提醒"
+      "shortcutName": "强制休息提醒",
+      "uninstallDisplayName": "强制休息提醒",
+      "artifactName": "remind-${version}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "remind-${version}-portable.${ext}"
     }
   }
 }

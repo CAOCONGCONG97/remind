@@ -45,13 +45,38 @@ npm test
 
 核心休息引擎与密码哈希为纯 TS，可在任意平台跑通。
 
-## 打包（Windows）
+## 打包（Windows 安装包）
+
+在仓库根目录（需 Windows + Node 20+）：
 
 ```bash
+npm install
 npm run pack:win
 ```
 
-产物在 `release/`（NSIS 安装包）。
+`pack:win` = `electron-vite build` + `electron-builder --win --x64`。
+
+### 产物（`release/`）
+
+| 文件 | 说明 |
+|------|------|
+| `remind-0.1.0-setup.exe` | **NSIS 安装程序**（可双击安装，可选目录、桌面/开始菜单快捷方式） |
+| `remind-0.1.0-portable.exe` | 便携版（解压即用，不写安装向导） |
+
+国内若下载 electron-builder 二进制慢，可先设：
+
+```powershell
+$env:ELECTRON_MIRROR='https://npmmirror.com/mirrors/electron/'
+$env:ELECTRON_BUILDER_BINARIES_MIRROR='https://npmmirror.com/mirrors/electron-builder-binaries/'
+$env:CSC_IDENTITY_AUTO_DISCOVERY='false'   # 跳过代码签名
+npm run pack:win
+```
+
+### 安装与已知限制
+
+1. 双击 `remind-*-setup.exe` → 选安装目录 → 完成。
+2. **未做代码签名**：SmartScreen / 杀软可能提示「未知发布者」，选「仍要运行 / 更多信息」即可。
+3. 首次启动仍会要求设置紧急密码，然后出现系统托盘图标（注意 Win11 托盘溢出区）。
 
 ## 紧急密码
 
