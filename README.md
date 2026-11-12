@@ -112,7 +112,8 @@ npm run pack:win
 - 部分**独占全屏游戏**或其它更高 TopMost 窗口可能压过遮罩。
 - 锁屏 / 睡眠依赖 Electron `powerMonitor`（`lock-screen` / `suspend` 等）；快速用户切换等边界需自行留意。
 - 关机调用 `shutdown /s /t 0 /f`；取消须在真正执行前完成（本应用在到点前用密码取消）。
-- 开机自启使用 `app.setLoginItemSettings`；Win11 可能把图标收进托盘溢出区。
+- 开机自启写入 `HKCU\...\Run`（值名 `RemindForcedRest`）并调用 `app.setLoginItemSettings`；**请使用 setup 安装版**。便携版解压在 Temp，旧逻辑会把自启指到临时目录，重启后失效。
+- Win11 若仍不自启：打开「设置 → 应用 → 启动」，确认「强制休息提醒 / RemindForcedRest」为开。
 
 ## 许可
 

@@ -1,6 +1,6 @@
 {
   "name": "remind",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Win11 离线强制休息提醒（托盘常驻）",
   "main": "./out/main/index.js",
   "author": "CAOCONGCONG97",

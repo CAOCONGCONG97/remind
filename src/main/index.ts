@@ -5,7 +5,7 @@ import type { AppSettings, CancelShutdownScope } from '../core/types'
 import { EngineHost } from './engine-host'
 import { OnboardingWindowController } from './onboarding-window'
 import { OverlayManager } from './overlay-manager'
-import { setAutoStartEnabled } from './platform'
+import { isAutoStartEnabled, setAutoStartEnabled } from './platform'
 import { PreRestToastController } from './pre-rest-toast'
 import { SettingsWindowController, SetupWindowController } from './settings-window'
 import { ShutdownScheduler } from './shutdown-scheduler'
@@ -35,7 +35,16 @@ function toPublicSettings(settings: AppSettings) {
 }
 
 function registerIpc(): void {
-  ipcMain.handle('settings:get', () => toPublicSettings(loadSettings()))
+  ipcMain.handle('settings:get', () => {
+    const settings = loadSettings()
+    // 以系统 Run / loginItem 为准回显开关，避免 JSON 与注册表脱节
+    const liveAutoStart = isAutoStartEnabled()
+    if (settings.autoStart !== liveAutoStart) {
+      updateSettings({ autoStart: liveAutoStart })
+      settings.autoStart = liveAutoStart
+    }
+    return toPublicSettings(settings)
+  })
 
   ipcMain.handle(
     'settings:save',
@@ -59,8 +68,18 @@ function registerIpc(): void {
         next.preRestWarnMinutes = patch.preRestWarnMinutes
       }
       if (typeof patch.autoStart === 'boolean') {
-        next.autoStart = patch.autoStart
-        setAutoStartEnabled(patch.autoStart)
+        const autoStartResult = setAutoStartEnabled(patch.autoStart)
+        if (patch.autoStart && !autoStartResult.ok) {
+          throw new Error(autoStartResult.message || '开机自启设置失败')
+        }
+        // 若系统层未真正打开，不要把 JSON 里的开关标成已开
+        next.autoStart = patch.autoStart ? autoStartResult.enabled : false
+        if (patch.autoStart && !autoStartResult.enabled) {
+          throw new Error(
+            autoStartResult.message ||
+              '开机自启未生效，请到「Windows 设置 → 应用 → 启动」中允许本应用'
+          )
+        }
       }
       if (typeof patch.dailyShutdownEnabled === 'boolean') {
         next.dailyShutdownEnabled = patch.dailyShutdownEnabled
@@ -101,7 +120,12 @@ function registerIpc(): void {
       return { ok: false, message: '两次输入的密码不一致' }
     }
     const saved = updateSettings({ passwordHash: hashPassword(password) })
-    setAutoStartEnabled(saved.autoStart)
+    if (saved.autoStart) {
+      const autoStartResult = setAutoStartEnabled(true)
+      if (!autoStartResult.ok || !autoStartResult.enabled) {
+        updateSettings({ autoStart: false })
+      }
+    }
     setupWindow?.markComplete()
     // 首次设密后走三步引导；完成后由 onboarding:complete 启动计时
     onboardingWindow = new OnboardingWindowController(preloadPath)
@@ -272,10 +296,22 @@ function startRuntime(settings: AppSettings): void {
     triggerMode: settings.triggerMode
   })
 
-  setAutoStartEnabled(settings.autoStart)
+  // 每次启动按当前设置重写 Run，顺带清掉历史错误的 Temp 自启项
+  if (settings.autoStart) {
+    const autoStartResult = setAutoStartEnabled(true)
+    if (!autoStartResult.ok || !autoStartResult.enabled) {
+      updateSettings({ autoStart: false })
+      console.warn('[autostart] disabled after failed apply:', autoStartResult.message)
+    }
+  } else {
+    setAutoStartEnabled(false)
+  }
 }
 
 async function bootstrap(): Promise<void> {
+  // 稳定 AUMID，避免 Run 键落到 electron.app.Electron
+  app.setAppUserModelId('com.chaopin.remind')
+
   const gotLock = app.requestSingleInstanceLock()
   if (!gotLock) {
     app.quit()
