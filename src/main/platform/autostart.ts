@@ -136,8 +136,7 @@ export function isAutoStartEnabled(): boolean {
     const target = currentTarget()
     const fromElectron = app.getLoginItemSettings({
       path: target.path,
-      args: target.args,
-      name: AUTOSTART_RUN_VALUE
+      args: target.args
     })
     if (fromElectron.openAtLogin || fromElectron.executableWillLaunchAtLogin) {
       return true

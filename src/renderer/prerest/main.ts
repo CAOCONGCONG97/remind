@@ -1,4 +1,5 @@
 const remainEl = document.getElementById('remain') as HTMLElement
+const hintEl = document.getElementById('hint') as HTMLElement
 const mainActions = document.getElementById('mainActions') as HTMLElement
 const ackBtn = document.getElementById('ackBtn') as HTMLButtonElement
 const extendBtn = document.getElementById('extendBtn') as HTMLButtonElement
@@ -26,16 +27,20 @@ ackBtn.addEventListener('click', () => {
 
 extendBtn.addEventListener('click', () => {
   mainActions.hidden = true
+  hintEl.hidden = true
   extendForm.hidden = false
   errorEl.textContent = ''
   passwordInput.value = ''
+  void window.remind.setPreRestLayout('extend')
   passwordInput.focus()
 })
 
 backBtn.addEventListener('click', () => {
   extendForm.hidden = true
+  hintEl.hidden = false
   mainActions.hidden = false
   errorEl.textContent = ''
+  void window.remind.setPreRestLayout('main')
 })
 
 extendForm.addEventListener('click', (event) => {
@@ -53,5 +58,7 @@ extendForm.addEventListener('submit', async (event) => {
     return
   }
   extendForm.hidden = true
+  hintEl.hidden = false
   mainActions.hidden = false
+  void window.remind.setPreRestLayout('main')
 })

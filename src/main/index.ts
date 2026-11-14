@@ -188,6 +188,14 @@ function registerIpc(): void {
     engineHost?.dismissPreRestToast()
   })
 
+  ipcMain.handle('prerest:layout', (_event, layout: 'main' | 'extend') => {
+    preRestToast?.setLayout(layout === 'extend' ? 'extend' : 'main')
+  })
+
+  ipcMain.handle('shutdown:layout', (_event, layout: 'main' | 'form') => {
+    shutdownToast?.setLayout(layout === 'form' ? 'form' : 'main')
+  })
+
   ipcMain.handle(
     'shutdown:cancel',
     (_event, payload: { password: string; scope: CancelShutdownScope }) => {

@@ -32,7 +32,15 @@ function openForm(mode: 'cancel' | 'defer'): void {
   deferChoices.hidden = mode !== 'defer'
   formHint.textContent = mode === 'cancel' ? '取消范围' : '推迟多久'
   pendingAction = mode === 'cancel' ? 'cancel-once' : 'defer-15'
+  void window.remind.setShutdownLayout('form')
   passwordInput.focus()
+}
+
+function closeForm(): void {
+  actionForm.hidden = true
+  mainActions.hidden = false
+  errorEl.textContent = ''
+  void window.remind.setShutdownLayout('main')
 }
 
 window.remind.onShutdownState((payload) => {
@@ -49,9 +57,7 @@ ackBtn.addEventListener('click', () => {
 })
 
 backBtn.addEventListener('click', () => {
-  actionForm.hidden = true
-  mainActions.hidden = false
-  errorEl.textContent = ''
+  closeForm()
 })
 
 actionForm.addEventListener('click', (event) => {
@@ -77,6 +83,5 @@ actionForm.addEventListener('submit', async (event) => {
     errorEl.textContent = result.message ?? '操作失败'
     return
   }
-  actionForm.hidden = true
-  mainActions.hidden = false
+  closeForm()
 })
