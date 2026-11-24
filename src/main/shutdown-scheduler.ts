@@ -1,4 +1,5 @@
 import type { AppSettings, CancelShutdownScope } from '../core/types'
+import { evaluateDailyShutdown } from '../core/shutdown-schedule'
 import { localDateKey, updateSettings } from './settings-store'
 import { shutdownNow } from './platform'
 import { ShutdownToastController } from './shutdown-toast'
@@ -7,10 +8,17 @@ import type { OverlayManager } from './overlay-manager'
 /**
  * 每日关机调度：到「提前提醒」时点弹出右下角窗；到点执行关机。
  * 取消范围：仅本次 / 当天；也可推迟 N 分钟。
+ *
+ * 开机/登录若已晚于今日设定关机时刻：跳过今日自动关机（等明日），
+ * 绝不因「时间已过」而在启动瞬间静默关机。
  */
 export class ShutdownScheduler {
   private timer: NodeJS.Timeout | null = null
   private warningShownForKey = ''
+  /** 本进程已进入提前提醒窗口的档期 key；过点且未武装 → 视为 missed，不关机 */
+  private armedSlotKey = ''
+  /** 今日已判定为「启动过晚跳过」的 slot，避免每秒重复判定 */
+  private missedSlotKey = ''
   private settings: AppSettings
 
   constructor(
@@ -22,6 +30,15 @@ export class ShutdownScheduler {
   }
 
   applySettings(settings: AppSettings): void {
+    // 关机时刻或开关变更后，丢弃旧档期的武装/跳过标记，按新配置重新判定
+    if (
+      settings.shutdownTime !== this.settings.shutdownTime ||
+      settings.dailyShutdownEnabled !== this.settings.dailyShutdownEnabled
+    ) {
+      this.armedSlotKey = ''
+      this.missedSlotKey = ''
+      this.warningShownForKey = ''
+    }
     this.settings = settings
   }
 
@@ -58,6 +75,7 @@ export class ShutdownScheduler {
     this.toast.hide()
     this.overlays.setBelowShutdownToast(false)
     this.warningShownForKey = ''
+    this.armedSlotKey = ''
     return this.settings
   }
 
@@ -75,103 +93,80 @@ export class ShutdownScheduler {
   }
 
   private async tick(): Promise<void> {
-    if (!this.settings.dailyShutdownEnabled) {
-      this.toast.hide()
-      this.overlays.setBelowShutdownToast(false)
-      return
-    }
+    const decision = evaluateDailyShutdown({
+      enabled: this.settings.dailyShutdownEnabled,
+      nowMs: Date.now(),
+      shutdownTime: this.settings.shutdownTime,
+      warnMinutes: this.settings.shutdownWarnMinutes,
+      cancelledDate: this.settings.shutdownCancelledDate,
+      skipNext: this.settings.shutdownSkipNext,
+      deferredUntil: this.settings.shutdownDeferredUntil,
+      armedSlotKey: this.armedSlotKey
+    })
 
-    const now = new Date()
-    const nowMs = now.getTime()
-    const today = localDateKey(now)
-    if (this.settings.shutdownCancelledDate === today) {
-      this.toast.hide()
-      this.overlays.setBelowShutdownToast(false)
-      return
-    }
-
-    if (this.settings.shutdownDeferredUntil > nowMs) {
-      const remainingMs = this.settings.shutdownDeferredUntil - nowMs
-      const label = formatTime(new Date(this.settings.shutdownDeferredUntil))
-      const payload = { shutdownAtLabel: label, remainingMs, deferred: true }
-      this.overlays.setBelowShutdownToast(true)
-      if (this.warningShownForKey !== `defer:${this.settings.shutdownDeferredUntil}`) {
-        this.warningShownForKey = `defer:${this.settings.shutdownDeferredUntil}`
-        this.toast.show(payload)
-      } else {
-        this.toast.update(payload)
-      }
-      return
-    }
-
-    if (this.settings.shutdownDeferredUntil > 0 && this.settings.shutdownDeferredUntil <= nowMs) {
-      // 推迟到期：执行关机（除非又被取消）
-      if (this.settings.shutdownSkipNext) {
-        this.settings = updateSettings({ shutdownSkipNext: false, shutdownDeferredUntil: 0 })
+    switch (decision.kind) {
+      case 'noop':
         this.toast.hide()
         this.overlays.setBelowShutdownToast(false)
         return
-      }
-      this.settings = updateSettings({ shutdownDeferredUntil: 0 })
-      this.toast.hide()
-      this.overlays.setBelowShutdownToast(false)
-      await shutdownNow('强制休息提醒：推迟后的关机时刻已到')
-      return
-    }
-
-    const target = nextShutdownDate(now, this.settings.shutdownTime)
-    if (!target) {
-      return
-    }
-
-    const remainingMs = target.getTime() - nowMs
-    const warnMs = this.settings.shutdownWarnMinutes * 60_000
-    const dayKey = `${today}@${this.settings.shutdownTime}`
-
-    if (remainingMs <= 0) {
-      if (this.settings.shutdownSkipNext) {
-        this.settings = updateSettings({ shutdownSkipNext: false })
+      case 'hideWarn':
         this.toast.hide()
         this.overlays.setBelowShutdownToast(false)
+        this.warningShownForKey = ''
         return
-      }
-      this.toast.hide()
-      this.overlays.setBelowShutdownToast(false)
-      await shutdownNow()
-      return
-    }
-
-    if (remainingMs <= warnMs) {
-      const label = formatTime(target)
-      const payload = { shutdownAtLabel: label, remainingMs, deferred: false }
-      if (this.warningShownForKey !== dayKey) {
-        this.warningShownForKey = dayKey
+      case 'warn': {
+        // 进入提前提醒窗口即武装：之后到点才允许真正关机
+        if (!decision.deferred) {
+          this.armedSlotKey = decision.slotKey
+        }
+        const payload = {
+          shutdownAtLabel: decision.shutdownAtLabel,
+          remainingMs: decision.remainingMs,
+          deferred: decision.deferred
+        }
         this.overlays.setBelowShutdownToast(true)
-        this.toast.show(payload)
-      } else {
-        this.toast.update(payload)
+        if (this.warningShownForKey !== decision.slotKey) {
+          this.warningShownForKey = decision.slotKey
+          this.toast.show(payload)
+        } else {
+          this.toast.update(payload)
+        }
+        return
       }
-    } else {
-      this.toast.hide()
-      this.overlays.setBelowShutdownToast(false)
-      this.warningShownForKey = ''
+      case 'consumeSkipNext': {
+        this.settings = updateSettings({
+          shutdownSkipNext: false,
+          ...(decision.clearDeferred ? { shutdownDeferredUntil: 0 } : {})
+        })
+        this.toast.hide()
+        this.overlays.setBelowShutdownToast(false)
+        return
+      }
+      case 'missedSlot': {
+        // 启动时今日关机时刻已过且从未武装：跳过今日，等明日同一时刻
+        if (this.missedSlotKey !== decision.slotKey) {
+          this.missedSlotKey = decision.slotKey
+          console.info(
+            `[shutdown] skip today's auto-shutdown (started after ${this.settings.shutdownTime}); next run tomorrow`
+          )
+        }
+        this.toast.hide()
+        this.overlays.setBelowShutdownToast(false)
+        return
+      }
+      case 'shutdown': {
+        if (decision.clearDeferred) {
+          this.settings = updateSettings({ shutdownDeferredUntil: 0 })
+        }
+        this.toast.hide()
+        this.overlays.setBelowShutdownToast(false)
+        await shutdownNow(decision.reason)
+        return
+      }
+      default: {
+        const _exhaustive: never = decision
+        void _exhaustive
+      }
     }
   }
-}
-
-function nextShutdownDate(now: Date, hhmm: string): Date | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim())
-  if (!match) {
-    return null
-  }
-  const hour = Number(match[1])
-  const minute = Number(match[2])
-  const target = new Date(now)
-  target.setSeconds(0, 0)
-  target.setHours(hour, minute, 0, 0)
-  return target
-}
-
-function formatTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
