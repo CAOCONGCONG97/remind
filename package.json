@@ -1,6 +1,6 @@
 {
   "name": "remind",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Win11 离线强制休息提醒（托盘常驻，含本机 TOTP 认证器）",
   "main": "./out/main/index.js",
   "author": "CAOCONGCONG97",
