@@ -10,6 +10,7 @@ import { PreRestToastController } from './pre-rest-toast'
 import { SettingsWindowController, SetupWindowController } from './settings-window'
 import { ShutdownScheduler } from './shutdown-scheduler'
 import { ShutdownToastController } from './shutdown-toast'
+import { AuthenticatorController } from './authenticator-window'
 import { aboutMessage, AppTrayController } from './tray'
 import { hasPasswordConfigured, loadSettings, saveSettings, updateSettings } from './settings-store'
 
@@ -21,6 +22,7 @@ let setupWindow: SetupWindowController | null = null
 let onboardingWindow: OnboardingWindowController | null = null
 let shutdownToast: ShutdownToastController | null = null
 let preRestToast: PreRestToastController | null = null
+let authenticator: AuthenticatorController | null = null
 let tray: AppTrayController | null = null
 let quitting = false
 
@@ -281,6 +283,7 @@ function startRuntime(settings: AppSettings): void {
   if (!tray) {
     tray = new AppTrayController({
       openSettings: () => settingsWindow?.open(),
+      openAuthenticator: () => authenticator?.open(),
       startRestNow: () => engineHost?.startRestNow(),
       extendWork: (minutes) => confirmExtend(minutes),
       showAbout: () => {
@@ -289,7 +292,7 @@ function startRuntime(settings: AppSettings): void {
           title: '关于',
           message: aboutMessage(),
           detail:
-            '限制说明：无法覆盖 UAC/安全桌面，部分独占全屏游戏也可能压过遮罩。紧急密码仅本地校验，防一时手痒，非防破解。'
+            '限制说明：无法覆盖 UAC/安全桌面，部分独占全屏游戏也可能压过遮罩。紧急密码仅本地校验，防一时手痒，非防破解。认证器密钥仅本机加密存储，勿导出到不可信位置。'
         })
       },
       quit: () => {
@@ -331,6 +334,13 @@ async function bootstrap(): Promise<void> {
 
   await app.whenReady()
   registerIpc()
+
+  // 认证器 IPC 尽早挂上，首次设密引导阶段也可从托盘外调用（托盘在 startRuntime 后才有）
+  authenticator = new AuthenticatorController(preloadPath)
+  authenticator.init()
+  ipcMain.handle('authenticator:open', () => {
+    authenticator?.open()
+  })
 
   if (process.platform === 'darwin') {
     app.dock?.hide()

@@ -99,8 +99,14 @@
         <button type="submit" class="primary">保存设置</button>
       </form>
 
+      <p class="section-title">本机认证器</p>
+      <p class="hint">与强制休息同进程；扫屏绑定 TOTP、查看动态码、导出密钥。也可在托盘菜单打开。</p>
+      <button type="button" class="primary" id="openAuthenticator" style="width:100%;margin-top:8px">
+        打开认证器…
+      </button>
+
       <p class="hint limits">
-        Win11 限制：遮罩无法盖住 UAC / 安全桌面；部分独占全屏游戏也可能压过遮罩。紧急密码仅本地校验。
+        Win11 限制：遮罩无法盖住 UAC / 安全桌面；部分独占全屏游戏也可能压过遮罩。紧急密码仅本地校验。认证器密钥仅本机加密存储。
       </p>
     </main>
     <script type="module" src="./main.ts"></script>
