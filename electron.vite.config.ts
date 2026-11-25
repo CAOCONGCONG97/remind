@@ -32,7 +32,9 @@ export default defineConfig({
           setup: resolve(__dirname, 'src/renderer/setup/index.html'),
           shutdown: resolve(__dirname, 'src/renderer/shutdown/index.html'),
           prerest: resolve(__dirname, 'src/renderer/prerest/index.html'),
-          onboarding: resolve(__dirname, 'src/renderer/onboarding/index.html')
+          onboarding: resolve(__dirname, 'src/renderer/onboarding/index.html'),
+          authenticator: resolve(__dirname, 'src/renderer/authenticator/index.html'),
+          'auth-capture': resolve(__dirname, 'src/renderer/auth-capture/index.html')
         }
       }
     }

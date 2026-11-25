@@ -1,0 +1,40 @@
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: crosshair;
+  background: transparent;
+  font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  user-select: none;
+}
+
+#hint {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+#shade {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.28);
+  z-index: 1;
+}
+
+#box {
+  position: fixed;
+  z-index: 2;
+  border: 2px solid #3dd68c;
+  background: rgba(61, 214, 140, 0.12);
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);
+}

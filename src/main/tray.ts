@@ -5,6 +5,7 @@ import { formatDurationZh, type EngineSnapshot, type TriggerMode } from '../core
 
 export type TrayActions = {
   openSettings: () => void
+  openAuthenticator: () => void
   startRestNow: () => void
   extendWork: (minutes: number) => void
   showAbout: () => void
@@ -96,6 +97,10 @@ export class AppTrayController {
           click: () => this.actions.openSettings()
         },
         {
+          label: '认证器…',
+          click: () => this.actions.openAuthenticator()
+        },
+        {
           label: '立即休息',
           click: () => this.actions.startRestNow()
         },
@@ -128,5 +133,5 @@ export class AppTrayController {
 }
 
 export function aboutMessage(): string {
-  return `强制休息提醒\n版本 ${app.getVersion()}\n纯本地离线 · Win11`
+  return `强制休息提醒\n版本 ${app.getVersion()}\n纯本地离线 · Win11\n含本机 TOTP 认证器（托盘「认证器…」）`
 }

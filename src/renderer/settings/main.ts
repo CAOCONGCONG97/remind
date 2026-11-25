@@ -89,4 +89,8 @@ form.addEventListener('submit', async (event) => {
   }
 })
 
+document.getElementById('openAuthenticator')?.addEventListener('click', () => {
+  void window.remind.openAuthenticator()
+})
+
 void load()
