@@ -1,3 +1,4 @@
 export { bindSessionHooks } from './session'
-export { isAutoStartEnabled, setAutoStartEnabled } from './autostart'
+export { AUTOSTART_RUN_VALUE, isAutoStartEnabled, setAutoStartEnabled } from './autostart'
+export type { AutoStartResult } from './autostart'
 export { abortQueuedShutdown, shutdownNow } from './power'

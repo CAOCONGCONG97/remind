@@ -21,6 +21,10 @@ const api = {
     password: string
   ): Promise<{ ok: boolean; message?: string }> => ipcRenderer.invoke('rest:extend', { minutes, password }),
   dismissPreRestToast: (): Promise<void> => ipcRenderer.invoke('prerest:dismiss'),
+  setPreRestLayout: (layout: 'main' | 'extend'): Promise<void> =>
+    ipcRenderer.invoke('prerest:layout', layout),
+  setShutdownLayout: (layout: 'main' | 'form'): Promise<void> =>
+    ipcRenderer.invoke('shutdown:layout', layout),
   cancelShutdown: (
     password: string,
     scope: CancelShutdownScope

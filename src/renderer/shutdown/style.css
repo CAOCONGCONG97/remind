@@ -1,11 +1,18 @@
+html,
+body {
+  height: 100%;
+  overflow: auto;
+}
+
 body {
   background: linear-gradient(160deg, #0f172a, #111827 55%, #1e293b);
   color: #f8fafc;
-  overflow: hidden;
 }
 
 .toast {
-  padding: 16px 16px 14px;
+  padding: 18px 18px 16px;
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 h1 {

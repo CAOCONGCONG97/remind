@@ -11,14 +11,14 @@
     <main class="toast">
       <h1>即将强制休息</h1>
       <p id="remain" class="remain">剩余 --:--</p>
-      <p class="hint">这是轻提醒，不会立刻遮罩。可保存进度或延长本段。</p>
+      <p id="hint" class="hint">这是轻提醒，不会立刻遮罩。可保存进度或延长本段。</p>
       <div id="mainActions" class="actions">
         <button id="ackBtn" class="ghost">知道了</button>
         <button id="extendBtn" class="primary">延长本段…</button>
       </div>
       <form id="extendForm" hidden>
         <label for="password">紧急密码</label>
-        <input id="password" type="password" autocomplete="current-password" />
+        <input id="password" type="password" autocomplete="current-password" placeholder="输入后选择延长时长" />
         <div class="actions">
           <button type="submit" data-minutes="15" class="primary">+15 分钟</button>
           <button type="submit" data-minutes="30" class="primary">+30 分钟</button>
