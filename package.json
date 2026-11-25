@@ -1,6 +1,6 @@
 {
   "name": "remind",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Win11 离线强制休息提醒（托盘常驻，含本机 TOTP 认证器）",
   "main": "./out/main/index.js",
   "author": "CAOCONGCONG97",
@@ -26,6 +26,7 @@
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "rcedit": "^4.0.1",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
     "vitest": "^2.1.8"
@@ -33,6 +34,7 @@
   "build": {
     "appId": "com.chaopin.remind",
     "productName": "强制休息提醒",
+    "afterPack": "./build/afterPack.cjs",
     "directories": {
       "output": "release"
     },
